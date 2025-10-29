@@ -20,6 +20,22 @@ class InputImage(Input):
     class Config:
         title = "Image"
 
+class InputImage2(Input):
+    name: Literal["inputImage2"] = "inputImage2"
+    value: Union[List[Image], Image]
+    type: str = "object"
+
+    @validator("type", pre=True, always=True)
+    def set_type_based_on_value(cls, value, values):
+        value = values.get('value')
+        if isinstance(value, Image):
+            return "object"
+        elif isinstance(value, list):
+            return "list"
+
+    class Config:
+        title = "Image"
+
 
 class OutputImage(Output):
     name: Literal["outputImage"] = "outputImage"
@@ -66,6 +82,8 @@ class FilterType(Config):
     value: Union[Blur, Sharpen]
     type: Literal["object"] = "object"
     field: Literal["dropdownlist"] = "dropdownlist"
+    class Config:
+        title="Filter Type"
 
 
 class Intensity(Config):
@@ -97,11 +115,13 @@ class OutputFormat(Config):
     value:Union[Percentage, TextDescription]
     type: Literal["object"] = "object"
     field: Literal["dropdownlist"] = "dropdownList"
+    class Config:
+        title="Output Format"
 
 #Inputs
 class  CompareAndDescribeExecutorInputs(Inputs):
     inputImage: InputImage
-    inputImage2: InputImage
+    inputImage2: InputImage2
 
 
 class BasicFilterExecutorInputs(Inputs):
@@ -160,6 +180,7 @@ class CompareAndDescribeExecutorResponse(Response):
 
 class BasicFilterExecutorResponse(Response):
     outputs: BasicFilterExecutorOutputs
+
 
 
 #Executors
