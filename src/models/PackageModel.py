@@ -162,7 +162,6 @@ class BasicFilterExecutorResponse(Response):
     outputs: BasicFilterExecutorOutputs
 
 
-
 #Executors
 class CompareAndDescribeExecutor(Config):
     name: Literal["CompareAndDescribeExecutor"] = "CompareAndDescribeExecutor"
