@@ -38,69 +38,104 @@ class OutputImage(Output):
         title = "Image"
 
 
-class KeepSideFalse(Config):
-    name: Literal["False"] = "False"
-    value: Literal[False] = False
-    type: Literal["bool"] = "bool"
+
+#BasicFilter Configs
+class Blur(Config):
+    name: Literal["Blur"] = "Blur"
+    value: Literal["Blur"] = "Blur"
+    type: Literal["string"] = "string"
     field: Literal["option"] = "option"
 
     class Config:
-        title = "Disable"
+        title = "Blur"
 
-
-class KeepSideTrue(Config):
-    name: Literal["True"] = "True"
-    value: Literal[True] = True
-    type: Literal["bool"] = "bool"
+class Sharpen(Config):
+    name: Literal["Sharpen"] = "Sharpen"
+    value: Literal["Sharpen"] = "Sharpen"
+    type: Literal["string"] = "string"
     field: Literal["option"] = "option"
 
     class Config:
-        title = "Enable"
+        title = "Sharpen"
 
-
-class KeepSideBBox(Config):
+class FilterType(Config):
     """
-        Rotate image without catting off sides.
+    Select which filter to apply to the image.
     """
-    name: Literal["KeepSide"] = "KeepSide"
-    value: Union[KeepSideTrue, KeepSideFalse]
+    name: Literal["filterType"] = "filterType"
+    value: Union[Blur, Sharpen]
     type: Literal["object"] = "object"
     field: Literal["dropdownlist"] = "dropdownlist"
 
-    class Config:
-        title = "Keep Sides"
 
+class Intensity(Config):
 
-class Degree(Config):
-    """
-        Positive angles specify counterclockwise rotation while negative angles indicate clockwise rotation.
-    """
-    name: Literal["Degree"] = "Degree"
-    value: int = Field(ge=-359.0, le=359.0,default=0)
+    name: Literal["intensity"] = "intensity"
+    value: float = Field(ge=1, le=10)
     type: Literal["number"] = "number"
     field: Literal["textInput"] = "textInput"
-    placeHolder: Literal["[-359, 359]"] = "[-359, 359]"
 
+#CompareAndDescribe Configs
+class Percentage(Config):
+    name: Literal["Percentage"] = "Percentage"
+    value:Literal["Percentage"] = "Percentage"
+    type: Literal["number"] = "number"
+    field: Literal["option"] = "option"
     class Config:
-        title = "Angle"
+        title="Percentage"
+
+class TextDescription(Config):
+    name: Literal["TextDescription"] = "TextDescription"
+    value:Literal["TextDescription"] = "TextDescription"
+    type: Literal["string"] = "string"
+    field: Literal["option"] = "option"
+    class Config:
+        title = "Text Description"
+
+class OutputFormat(Config):
+    name: Literal["outputFormat"] = "outputFormat"
+    value:Union[Percentage, TextDescription]
+    type: Literal["object"] = "object"
+    field: Literal["dropdownlist"] = "dropdownList"
+
+#Inputs
+class  CompareAndDescribeExecutorInputs(Inputs):
+    inputImage: InputImage
+    inputImage2: InputImage
 
 
-class PackageInputs(Inputs):
+class BasicFilterExecutorInputs(Inputs):
     inputImage: InputImage
 
 
-class PackageConfigs(Configs):
-    degree: Degree
-    drawBBox: KeepSideBBox
+#Configs
+class CompareAndDescribeExecutorConfigs(Configs):
+    outputFormat: OutputFormat
 
 
-class PackageOutputs(Outputs):
+class BasicFilterExecutorConfigs(Configs):
+    filterType: FilterType
+    intensity : Intensity
+
+
+#Outputs
+class OutputText(Output):
+    name: Literal["outputText"] = "outputText"
+    value:Literal["string"] = "string"
+    type: Literal["string"] = "string"
+
+class CompareAndDescribeExecutorOutputs(Outputs):
+    outputImage: OutputImage
+    outputText: OutputText
+
+class BasicFilterExecutorOutputs(Outputs):
     outputImage: OutputImage
 
 
-class PackageRequest(Request):
-    inputs: Optional[PackageInputs]
-    configs: PackageConfigs
+#Requests
+class CompareAndDescribeExecutorRequest(Request):
+    inputs: Optional[CompareAndDescribeExecutorInputs]
+    configs: CompareAndDescribeExecutorConfigs
 
     class Config:
         json_schema_extra = {
@@ -108,18 +143,35 @@ class PackageRequest(Request):
         }
 
 
-class PackageResponse(Response):
-    outputs: PackageOutputs
+class BasicFilterExecutorRequest(Request):
+    inputs: Optional[BasicFilterExecutorInputs]
+    configs: BasicFilterExecutorConfigs
+
+    class Config:
+        json_schema_extra = {
+            "target": "configs"
+        }
 
 
-class PackageExecutor(Config):
-    name: Literal["Package"] = "Package"
-    value: Union[PackageRequest, PackageResponse]
+#Responses
+class CompareAndDescribeExecutorResponse(Response):
+    outputs: CompareAndDescribeExecutorOutputs
+
+
+class BasicFilterExecutorResponse(Response):
+    outputs: BasicFilterExecutorOutputs
+
+
+
+#Executors
+class CompareAndDescribeExecutor(Config):
+    name: Literal["CompareAndDescribeExecutor"] = "CompareAndDescribeExecutor"
+    value: Union[CompareAndDescribeExecutorRequest, CompareAndDescribeExecutorResponse]
     type: Literal["object"] = "object"
     field: Literal["option"] = "option"
 
     class Config:
-        title = "Package"
+        title = "CompareAndDescribe"
         json_schema_extra = {
             "target": {
                 "value": 0
@@ -127,17 +179,31 @@ class PackageExecutor(Config):
         }
 
 
+class BasicFilterExecutor(Config):
+    name: Literal["BasicFilterExecutor"] = "BasicFilterExecutor"
+    value: Union[BasicFilterExecutorRequest, BasicFilterExecutorResponse]
+    type: Literal["object"] = "object"
+    field: Literal["option"] = "option"
+
+    class Config:
+        title = "BasicFilter"
+        json_schema_extra = {
+            "target": {
+                "value": 0
+            }
+        }
+
+
+
+#Package
 class ConfigExecutor(Config):
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
-    value: Union[PackageExecutor]
+    value: Union[BasicFilterExecutor,CompareAndDescribeExecutor]
     type: Literal["executor"] = "executor"
     field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
 
     class Config:
         title = "Task"
-        json_schema_extra = {
-            "target": "value"
-        }
 
 
 class PackageConfigs(Configs):
