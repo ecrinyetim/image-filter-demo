@@ -27,6 +27,5 @@ class CompareAndDescribe(Component):
     def run(self):
         pass
 
-
 if "__main__" == __name__:
     Executor(sys.argv[1]).run()
