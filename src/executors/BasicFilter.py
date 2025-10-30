@@ -15,7 +15,7 @@ from components.Package.src.utils.response import build_response
 from components.Package.src.models.PackageModel import PackageModel
 
 
-class BasicFilterExecutor(Component):
+class BasicFilter(Component):
     def __init__(self, request, bootstrap):
         super().__init__(request, bootstrap)
         self.request.model = PackageModel(**(self.request.data))
