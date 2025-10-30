@@ -185,7 +185,7 @@ class BasicFilterExecutorResponse(Response):
 
 #Executors
 class CompareAndDescribeExecutor(Config):
-    name: Literal["CompareAndDescribeExecutor"] = "CompareAndDescribeExecutor"
+    name: Literal["CompareAndDescribe"] = "CompareAndDescribe"
     value: Union[CompareAndDescribeExecutorRequest, CompareAndDescribeExecutorResponse]
     type: Literal["object"] = "object"
     field: Literal["option"] = "option"
@@ -200,7 +200,7 @@ class CompareAndDescribeExecutor(Config):
 
 
 class BasicFilterExecutor(Config):
-    name: Literal["BasicFilterExecutor"] = "BasicFilterExecutor"
+    name: Literal["BasicFilter"] = "BasicFilter"
     value: Union[BasicFilterExecutorRequest, BasicFilterExecutorResponse]
     type: Literal["object"] = "object"
     field: Literal["option"] = "option"
