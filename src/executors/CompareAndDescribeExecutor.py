@@ -27,6 +27,7 @@ class CompareAndDescribeExecutor(Component):
     def bootstrap(config: dict) -> dict:
         return {}
 
+
     def rotation(self, image):
         if self.keep_side == True:
             height, width = image.shape[:2]

@@ -14,7 +14,6 @@ from sdks.novavision.src.helper.executor import Executor
 from components.Package.src.utils.response import build_response
 from components.Package.src.models.PackageModel import PackageModel
 
-
 class BasicFilterExecutor(Component):
     def __init__(self, request, bootstrap):
         super().__init__(request, bootstrap)
