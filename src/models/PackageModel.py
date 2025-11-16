@@ -198,7 +198,6 @@ class CompareAndDescribeExecutor(Config):
             }
         }
 
-
 class BasicFilterExecutor(Config):
     name: Literal["BasicFilterExecutor"] = "BasicFilterExecutor"
     value: Union[BasicFilterExecutorRequest, BasicFilterExecutorResponse]
