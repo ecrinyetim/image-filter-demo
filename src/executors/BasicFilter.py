@@ -45,6 +45,7 @@ class BasicFilter(Component):
         else:
             return img
 
+
     def run(self):
         img = Image.get_frame(img=self.image, redis_db=self.redis_db)
         img.value = self.thresholding(img.value)
