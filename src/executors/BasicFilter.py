@@ -29,27 +29,25 @@ class BasicFilter(Component):
     def bootstrap(config: dict) -> dict:
         return {}
 
-    def blur(self, img):
-        ksize = self.intensity * 2 + 1
-        blurred = cv2.GaussianBlur(img, (ksize, ksize), sigmaX=0)
-        return blurred
+    def apply_filter(self, img):
+        if self.filterType == "Blur":
+            ksize = self.intensity * 2 + 1
+            return cv2.GaussianBlur(img, (ksize, ksize), sigmaX=0)
 
-    def sharpen(self,img):
-        kernel = np.array([
-            [-1, -1, -1],
-            [-1, 1 + self.intensity, -1],
-            [-1, -1, -1]
-        ], dtype=np.float32)
-        sharpened = cv2.filter2D(img, -1, kernel)
-        return sharpened
+        elif self.filterType == "Sharpen":
+            kernel = np.array([
+                [-1, -1, -1],
+                [-1, 1 + self.intensity, -1],
+                [-1, -1, -1]
+            ], dtype=np.float32)
+            return cv2.filter2D(img, -1, kernel)
+
+        else:
+            return img
 
     def run(self):
-        img=Image.get_frame(img=self.image,redis_db=self.redis_db)
-        if(self.filterType=="Blur"):
-            img.value=self.blur(img.value)
-        else:
-            img.value=self.sharpen(img.value)
-
+        img = Image.get_frame(img=self.images, redis_db=self.redis_db)
+        img.value = self.thresholding(img.value)
         self.image = Image.set_frame(img=img, package_uID=self.uID, redis_db=self.redis_db)
         packageModel = build_response_basic_filter(context=self)
         return packageModel
