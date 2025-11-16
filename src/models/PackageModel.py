@@ -214,7 +214,7 @@ class BasicFilterExecutor(Config):
 
 
 
-#ImageFilterDemo
+#Package
 class ConfigExecutor(Config):
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
     value: Union[BasicFilterExecutor,CompareAndDescribeExecutor]
@@ -232,4 +232,4 @@ class PackageConfigs(Configs):
 class PackageModel(Package):
     configs: PackageConfigs
     type: Literal["component"] = "component"
-    name: Literal["ImageFilterDemo"] = "ImageFilterDemo"
+    name: Literal["Package"] = "Package"
