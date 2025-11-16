@@ -14,6 +14,7 @@ def build_response_basic_filter(context):
     packageModel = package.build_model(context)
     return packageModel
 
+
 def build_response_compare_and_describe(context):
     outputImage = OutputImage(value=context.image)
     outputText =OutputText(value=context.text)

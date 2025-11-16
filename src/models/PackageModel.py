@@ -213,7 +213,6 @@ class BasicFilterExecutor(Config):
         }
 
 
-
 #Package
 class ConfigExecutor(Config):
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
