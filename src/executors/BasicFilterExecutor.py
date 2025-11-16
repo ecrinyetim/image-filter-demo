@@ -1,7 +1,6 @@
 """
     It is one of the preprocessing components in which the image is rotated.
 """
-
 import os
 import cv2
 import sys

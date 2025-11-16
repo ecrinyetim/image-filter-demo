@@ -223,7 +223,6 @@ class ConfigExecutor(Config):
     class Config:
         title = "Task"
 
-
 class PackageConfigs(Configs):
     executor: ConfigExecutor
 
