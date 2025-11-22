@@ -35,37 +35,47 @@ class CompareAndDescribe(Component):
         gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
         gray2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
 
-        score_ssim, diff = ssim(gray1, gray2, full=True)
-        similarity_percentage = score_ssim * 100
+        score, diff = ssim(gray1, gray2, full=True)
+        similarity_percentage = score * 100
+
+        diff = (diff * 255).astype("uint8")
+        diff_color = cv2.applyColorMap(255 - diff, cv2.COLORMAP_JET)
 
         if self.outputFormat == "Percentage":
-            return f"{similarity_percentage:.2f}% benzerlik"
-
-        elif self.outputFormat == "TextDescription":
-            if similarity_percentage > 90:
-                text = "Görüntüler neredeyse tamamen aynı."
-            elif similarity_percentage > 70:
-                text = "Görüntüler büyük ölçüde benzer."
-            elif similarity_percentage > 40:
-                text = "Görüntüler kısmen benziyor."
-            else:
-                text = "Görüntüler oldukça farklı."
-
-            return f"Benzerlik: {similarity_percentage:.2f}% — {text}"
-
+            text = f"{similarity_percentage:.2f}% benzerlik"
         else:
-            return "Geçersiz outputFormat. 'Percentage' veya 'TextDescription' olmalı."
+            if similarity_percentage > 90:
+                desc = "Görüntüler neredeyse tamamen aynı."
+            elif similarity_percentage > 70:
+                desc = "Görüntüler büyük ölçüde benzer."
+            elif similarity_percentage > 40:
+                desc = "Görüntüler kısmen benziyor."
+            else:
+                desc = "Görüntüler oldukça farklı."
+            text = f"Benzerlik: {similarity_percentage:.2f}% — {desc}"
+
+        return text, diff_color
 
     def run(self):
         img1 = Image.get_frame(img=self.image, redis_db=self.redis_db)
         img2 = Image.get_frame(img=self.image2, redis_db=self.redis_db)
-        compare_result = self.compare(img1.value, img2.value)
-        packageModel = build_response_compare_and_describe(
-            context=self,
-            result=compare_result
+
+        compare_text, diff_image = self.compare(img1.value, img2.value)
+
+        diff_img = Image.get_frame(img=self.image, redis_db=self.redis_db)
+        diff_img.value = diff_image
+
+        self.compareImage = Image.set_frame(
+            img=diff_img,
+            package_uID=self.uID,
+            redis_db=self.redis_db
         )
+
+        self.compareResult = compare_text
+        packageModel = build_response_compare_and_describe(context=self)
         return packageModel
 
 
 if "__main__" == __name__:
     Executor(sys.argv[1]).run()
+
