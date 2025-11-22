@@ -5,7 +5,7 @@ setuptools.setup(
     version="0.0.1",
     author="DigiNova",
     author_email='info@diginova.com.tr',
-    description="Package",
+    description="ImageFilterDemo",
     url='https://github.com/novavision-ai/package',
     license='MIT',
     install_requires=['sdk', 'opencv-python-headless'],

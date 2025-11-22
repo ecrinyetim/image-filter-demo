@@ -1,6 +1,6 @@
 
 from sdks.novavision.src.helper.package import PackageHelper
-from components.ImageFilter.src.models.PackageModel import PackageModel, PackageConfigs, ConfigExecutor , OutputImage, OutputText,BasicFilterResponse,BasicFilterOutputs,BasicFilter,CompareAndDescribeResponse,CompareAndDescribeOutputs,CompareAndDescribe
+from components.ImageFilterDemo.src.models.PackageModel import PackageModel, PackageConfigs, ConfigExecutor , OutputImage, OutputText,BasicFilterResponse,BasicFilterOutputs,BasicFilter,CompareAndDescribeResponse,CompareAndDescribeOutputs,CompareAndDescribe
 
 def build_response_basic_filter(context):
     outputImage = OutputImage(value=context.image)
