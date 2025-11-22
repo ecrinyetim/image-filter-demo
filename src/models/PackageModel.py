@@ -191,7 +191,7 @@ class CompareAndDescribeExecutor(Config):
     field: Literal["option"] = "option"
 
     class Config:
-        title = "CompareAndDescribe"
+        title = "CompareAndDescribeExecutor"
         json_schema_extra = {
             "target": {
                 "value": 0
