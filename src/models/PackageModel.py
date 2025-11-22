@@ -184,28 +184,28 @@ class BasicFilterExecutorResponse(Response):
 
 
 #Executors
-class CompareAndDescribeExecutor(Config):
-    name: Literal["CompareAndDescribeExecutor"] = "CompareAndDescribeExecutor"
+class CompareAndDescribe(Config):
+    name: Literal["CompareAndDescribe"] = "CompareAndDescribe"
     value: Union[CompareAndDescribeExecutorRequest, CompareAndDescribeExecutorResponse]
     type: Literal["object"] = "object"
     field: Literal["option"] = "option"
 
     class Config:
-        title = "CompareAndDescribeExecutor"
+        title = "CompareAndDescribe"
         json_schema_extra = {
             "target": {
                 "value": 0
             }
         }
 
-class BasicFilterExecutor(Config):
-    name: Literal["BasicFilterExecutor"] = "BasicFilterExecutor"
+class BasicFilter(Config):
+    name: Literal["BasicFilter"] = "BasicFilter"
     value: Union[BasicFilterExecutorRequest, BasicFilterExecutorResponse]
     type: Literal["object"] = "object"
     field: Literal["option"] = "option"
 
     class Config:
-        title = "BasicFilterExecutor"
+        title = "BasicFilter"
         json_schema_extra = {
             "target": {
                 "value": 0
@@ -215,7 +215,7 @@ class BasicFilterExecutor(Config):
 #Package
 class ConfigExecutor(Config):
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
-    value: Union[BasicFilterExecutor,CompareAndDescribeExecutor]
+    value: Union[BasicFilter,CompareAndDescribe]
     type: Literal["executor"] = "executor"
     field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
 
