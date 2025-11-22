@@ -119,21 +119,21 @@ class OutputFormat(Config):
         title="Output Format"
 
 #Inputs
-class  CompareAndDescribeExecutorInputs(Inputs):
+class  CompareAndDescribeInputs(Inputs):
     inputImage: InputImage
     inputImage2: InputImage2
 
 
-class BasicFilterExecutorInputs(Inputs):
+class BasicFilterInputs(Inputs):
     inputImage: InputImage
 
 
 #Configs
-class CompareAndDescribeExecutorConfigs(Configs):
+class CompareAndDescribeConfigs(Configs):
     outputFormat: OutputFormat
 
 
-class BasicFilterExecutorConfigs(Configs):
+class BasicFilterConfigs(Configs):
     filterType: FilterType
     intensity : Intensity
 
@@ -144,18 +144,18 @@ class OutputText(Output):
     value:Literal["string"] = "string"
     type: Literal["string"] = "string"
 
-class CompareAndDescribeExecutorOutputs(Outputs):
+class CompareAndDescribeOutputs(Outputs):
     outputImage: OutputImage
     outputText: OutputText
 
-class BasicFilterExecutorOutputs(Outputs):
+class BasicFilterOutputs(Outputs):
     outputImage: OutputImage
 
 
 #Requests
-class CompareAndDescribeExecutorRequest(Request):
-    inputs: Optional[CompareAndDescribeExecutorInputs]
-    configs: CompareAndDescribeExecutorConfigs
+class CompareAndDescribeRequest(Request):
+    inputs: Optional[CompareAndDescribeInputs]
+    configs: CompareAndDescribeConfigs
 
     class Config:
         json_schema_extra = {
@@ -163,9 +163,9 @@ class CompareAndDescribeExecutorRequest(Request):
         }
 
 
-class BasicFilterExecutorRequest(Request):
-    inputs: Optional[BasicFilterExecutorInputs]
-    configs: BasicFilterExecutorConfigs
+class BasicFilterRequest(Request):
+    inputs: Optional[BasicFilterInputs]
+    configs: BasicFilterConfigs
 
     class Config:
         json_schema_extra = {
@@ -174,19 +174,19 @@ class BasicFilterExecutorRequest(Request):
 
 
 #Responses
-class CompareAndDescribeExecutorResponse(Response):
-    outputs: CompareAndDescribeExecutorOutputs
+class CompareAndDescribeResponse(Response):
+    outputs: CompareAndDescribeOutputs
 
 
-class BasicFilterExecutorResponse(Response):
-    outputs: BasicFilterExecutorOutputs
+class BasicFilterResponse(Response):
+    outputs: BasicFilterOutputs
 
 
 
 #Executors
 class CompareAndDescribe(Config):
     name: Literal["CompareAndDescribe"] = "CompareAndDescribe"
-    value: Union[CompareAndDescribeExecutorRequest, CompareAndDescribeExecutorResponse]
+    value: Union[CompareAndDescribeRequest, CompareAndDescribeResponse]
     type: Literal["object"] = "object"
     field: Literal["option"] = "option"
 
@@ -200,7 +200,7 @@ class CompareAndDescribe(Config):
 
 class BasicFilter(Config):
     name: Literal["BasicFilter"] = "BasicFilter"
-    value: Union[BasicFilterExecutorRequest, BasicFilterExecutorResponse]
+    value: Union[BasicFilterRequest, BasicFilterResponse]
     type: Literal["object"] = "object"
     field: Literal["option"] = "option"
 
