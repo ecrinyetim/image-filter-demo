@@ -37,22 +37,24 @@ class CompareAndDescribe(Component):
         import numpy as np
         import cv2
         import traceback
+        import base64  # <--- GEREKLİ KÜTÜPHANE EKLENDİ
 
         # --- validation ---
+        # Hata durumunda bytes yerine boş string ("") dönüyoruz
         if img is None or img2 is None:
-            return {"error": "Both images must be provided", "output": None, "comparison_image_bytes": b""}
+            return {"error": "Both images must be provided", "output": None, "comparison_image_bytes": ""}
 
         # Try to coerce to numpy arrays if needed
         if not isinstance(img, np.ndarray):
             try:
                 img = np.array(img)
             except Exception:
-                return {"error": "img is not a numpy array and cannot be converted", "output": None, "comparison_image_bytes": b""}
+                return {"error": "img is not a numpy array and cannot be converted", "output": None, "comparison_image_bytes": ""}
         if not isinstance(img2, np.ndarray):
             try:
                 img2 = np.array(img2)
             except Exception:
-                return {"error": "img2 is not a numpy array and cannot be converted", "output": None, "comparison_image_bytes": b""}
+                return {"error": "img2 is not a numpy array and cannot be converted", "output": None, "comparison_image_bytes": ""}
 
         # Ensure BGR 3-channel
         if img.ndim == 2:
@@ -65,7 +67,7 @@ class CompareAndDescribe(Component):
             if img.shape[:2] != img2.shape[:2]:
                 img2 = cv2.resize(img2, (img.shape[1], img.shape[0]), interpolation=cv2.INTER_AREA)
         except Exception:
-            return {"error": "Failed to resize images to same dimensions", "output": None, "comparison_image_bytes": b""}
+            return {"error": "Failed to resize images to same dimensions", "output": None, "comparison_image_bytes": ""}
 
         # helpers
         def _to_gray(i):
@@ -158,9 +160,14 @@ class CompareAndDescribe(Component):
                 desc.append("Yorum: Görseller büyük ölçüde farklı.")
             text_description = "\n".join(desc)
 
-            # encode visualization to jpeg bytes (but DO NOT log them here)
+            # --- DÜZELTME BURADA YAPILDI ---
+            # encode visualization to jpeg bytes
             success, buf = cv2.imencode('.jpg', comp_vis, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
-            comparison_image_bytes = buf.tobytes() if success else b""
+
+            # Binary veriyi string (Base64) formatına çeviriyoruz:
+            comparison_image_bytes = ""
+            if success:
+                comparison_image_bytes = base64.b64encode(buf).decode('utf-8')
 
             # prepare plain dict result (do NOT call build_response_* here)
             out_fmt = self.outputFormat if isinstance(self.outputFormat, str) else (str(self.outputFormat) if self.outputFormat is not None else "")
@@ -173,7 +180,7 @@ class CompareAndDescribe(Component):
                 "output": output_value,
                 "percentage": round(percentage, 2),
                 "text_description": text_description,
-                "comparison_image_bytes": comparison_image_bytes,
+                "comparison_image_bytes": comparison_image_bytes, # Artık düzgün string
                 "num_diff_regions": num_diff_regions,
                 "diff_area_percent": diff_area_percent,
                 "mse": mse_val
@@ -183,7 +190,8 @@ class CompareAndDescribe(Component):
 
         except Exception as ex:
             tb = traceback.format_exc()
-            return {"error": "Exception during comparison", "exception": str(ex), "traceback": tb, "comparison_image_bytes": b""}
+            # Hata durumunda da empty string dönüyoruz
+            return {"error": "Exception during comparison", "exception": str(ex), "traceback": tb, "comparison_image_bytes": ""}
 
 
     def run(self):
