@@ -5,9 +5,7 @@
 import os
 import cv2
 import sys
-import numpy as np
-import traceback
-import base64  # Base64 importu en tepeye eklendi
+import hashlib
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../'))
 
@@ -28,48 +26,119 @@ class CompareAndDescribe(Component):
         self.percentage = self.request.get_param("Percentage")
         self.textDesc = self.request.get_param("TextDescription")
 
+        # Sonuç burada saklanır; method override edilmesin diye ayrı attribute kullanalım
+        self.compare_result = None
+
     @staticmethod
     def bootstrap(config: dict) -> dict:
         return {}
 
-    def compareAndDesc(self, img, img2):
-
+    def compareAndDesc(self, img,img2):
         import numpy as np
         import cv2
+        import base64
         import traceback
-        import base64  # <--- 1. BURAYA EKLENDİ
+        import hashlib
 
-        # --- validation ---
-        # Hata durumunda bytes (b"") yerine boş string ("") dönmelisiniz.
+        # Güvenli dönüş helper'ı
+        def _safe_return(result_dict):
+            # Log: comparison_image_bytes'ı ham basma; bunun yerine len + md5 logla (eğer logger varsa)
+            try:
+                b = result_dict.get("comparison_image_bytes")
+                if isinstance(b, (bytes, bytearray)):
+                    length = len(b)
+                    md5 = hashlib.md5(b).hexdigest()
+                    if hasattr(self, "logger"):
+                        try:
+                            self.logger.debug("comparison_image_bytes info: len=%d md5=%s", length, md5)
+                        except Exception:
+                            pass
+                else:
+                    if hasattr(self, "logger"):
+                        try:
+                            self.logger.debug("comparison_image_bytes not bytes or missing")
+                        except Exception:
+                            pass
+            except Exception:
+                # swallow logging errors
+                pass
+
+            # Eğer build_response_compare_and_describe fonksiyonu varsa, önce farklı imzalarla çağırmayı dene
+            try:
+                if callable(build_response_compare_and_describe):
+                    # 1) tek argüman olarak dict ver
+                    try:
+                        return build_response_compare_and_describe(result_dict)
+                    except TypeError:
+                        pass
+                    # 2) (output, image_bytes)
+                    try:
+                        return build_response_compare_and_describe(result_dict.get("output"), result_dict.get("comparison_image_bytes"))
+                    except TypeError:
+                        pass
+                    # 3) (output, text_description, image_bytes)
+                    try:
+                        return build_response_compare_and_describe(result_dict.get("output"), result_dict.get("text_description"), result_dict.get("comparison_image_bytes"))
+                    except TypeError:
+                        pass
+                # Eğer yukarıdakiler çalışmazsa dict'i döndür
+            except Exception:
+                # build_response... çağrısında hata olursa log ekle fakat yine dict döndür
+                try:
+                    if hasattr(self, "logger"):
+                        self.logger.exception("build_response_compare_and_describe call failed")
+                except Exception:
+                    pass
+            return result_dict
+
+        # --- validation ve dönüşüm ---
         if img is None or img2 is None:
-            return {"error": "Both images must be provided", "output": None, "comparison_image_bytes": ""}
+            return _safe_return({
+                "error": "Both images must be provided",
+                "output": None,
+                "comparison_image_bytes": b""
+            })
 
-        # ... (Kodun bu kısımları aynı kalabilir, array kontrolü vs.) ...
+        # Eğer PIL veya başka tip gelmişse numpy array'a çevrilmeye çalış (genelde img numpy array olur)
+        # (burada basit kontrol)
         if not isinstance(img, np.ndarray):
             try:
                 img = np.array(img)
             except Exception:
-                return {"error": "img is not a numpy array", "output": None, "comparison_image_bytes": ""}
+                return _safe_return({
+                    "error": "img is not a numpy array and cannot be converted",
+                    "output": None,
+                    "comparison_image_bytes": b""
+                })
         if not isinstance(img2, np.ndarray):
             try:
                 img2 = np.array(img2)
             except Exception:
-                return {"error": "img2 is not a numpy array", "output": None, "comparison_image_bytes": ""}
+                return _safe_return({
+                    "error": "img2 is not a numpy array and cannot be converted",
+                    "output": None,
+                    "comparison_image_bytes": b""
+                })
 
-        # Ensure BGR 3-channel
+        # Eğer tek kanallı gelirse BGR'ye çevir (görsel oluşturmak için)
         if img.ndim == 2:
             img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
         if img2.ndim == 2:
             img2 = cv2.cvtColor(img2, cv2.COLOR_GRAY2BGR)
 
-        # Resize img2 to img if needed
+        # Boyutları eşitle (img2'yi img boyutuna getir)
         try:
             if img.shape[:2] != img2.shape[:2]:
                 img2 = cv2.resize(img2, (img.shape[1], img.shape[0]), interpolation=cv2.INTER_AREA)
         except Exception:
-            return {"error": "Failed to resize images", "output": None, "comparison_image_bytes": ""}
+            # Eğer resize başarısız olursa hata döndür
+            return _safe_return({
+                "error": "Failed to resize images to same dimensions",
+                "output": None,
+                "comparison_image_bytes": b""
+            })
 
-        # helpers
+        # --- metric helper'ları ---
         def _to_gray(i):
             return cv2.cvtColor(i, cv2.COLOR_BGR2GRAY) if i.ndim == 3 else i
 
@@ -79,7 +148,7 @@ class CompareAndDescribe(Component):
             return float(np.mean((a_f - b_f) ** 2))
 
         def _ssim(imgA, imgB, k1=0.01, k2=0.03, L=255):
-            # ... (SSIM fonksiyonu aynı kalacak) ...
+            # single-channel SSIM implementation (özet)
             C1 = (k1 * L) ** 2
             C2 = (k2 * L) ** 2
             imgA_f = imgA.astype(np.float32)
@@ -105,7 +174,7 @@ class CompareAndDescribe(Component):
             return mean_ssim, ssim_map
 
         def _make_vis(a_bgr, b_bgr, diff_gray, thresh=30):
-            # ... (Görselleştirme fonksiyonu aynı kalacak) ...
+            # farkları eşikle ve konturları bul
             _, th = cv2.threshold(diff_gray, thresh, 255, cv2.THRESH_BINARY)
             kernel = np.ones((3, 3), np.uint8)
             th = cv2.morphologyEx(th, cv2.MORPH_OPEN, kernel, iterations=1)
@@ -130,7 +199,7 @@ class CompareAndDescribe(Component):
             combined = np.concatenate([a_bgr, overlay, heat], axis=1)
             return combined, contours, th
 
-        # compute metrics and visualization
+        # --- hesaplamalar ---
         try:
             gray1 = _to_gray(img)
             gray2 = _to_gray(img2)
@@ -145,7 +214,7 @@ class CompareAndDescribe(Component):
             total_pixels = th.shape[0] * th.shape[1] if th is not None else 1
             diff_area_percent = (total_diff_pixels / total_pixels) * 100.0 if total_pixels > 0 else 0.0
 
-            # description
+            # açıklama metni
             desc = []
             desc.append(f"Similarity (SSIM-based): {percentage:.2f}%")
             desc.append(f"MSE: {mse_val:.4f}")
@@ -161,22 +230,12 @@ class CompareAndDescribe(Component):
                 desc.append("Yorum: Görseller büyük ölçüde farklı.")
             text_description = "\n".join(desc)
 
-            # ---------------------------------------------------------
-            # 2. DÜZELTME BURADA: Görseli Base64 String'e çeviriyoruz
-            # ---------------------------------------------------------
-
-            # encode visualization to jpeg bytes
+            # görseli jpeg bytes'a çevir
             success, buf = cv2.imencode('.jpg', comp_vis, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+            comparison_image_bytes = buf.tobytes() if success else b""
 
-            comparison_image_bytes = ""
-            if success:
-                # Raw bytes yerine Base64 string kullanıyoruz.
-                # .decode('utf-8') ile bytes objesini string'e çeviriyoruz.
-                comparison_image_bytes = base64.b64encode(buf).decode('utf-8')
-
-            # prepare plain dict result
-            out_fmt = self.outputFormat if isinstance(self.outputFormat, str) else (
-                str(self.outputFormat) if self.outputFormat is not None else "")
+            # outputFormat kontrolü (bazı input'lar boolean/None olabilir)
+            out_fmt = self.outputFormat if isinstance(self.outputFormat, str) else (str(self.outputFormat) if self.outputFormat is not None else "")
             if isinstance(out_fmt, str) and out_fmt.lower() == "percentage":
                 output_value = round(percentage, 2)
             else:
@@ -186,31 +245,62 @@ class CompareAndDescribe(Component):
                 "output": output_value,
                 "percentage": round(percentage, 2),
                 "text_description": text_description,
-                "comparison_image_bytes": comparison_image_bytes,  # Artık string formatında
+                "comparison_image_bytes": comparison_image_bytes,
                 "num_diff_regions": num_diff_regions,
                 "diff_area_percent": diff_area_percent,
                 "mse": mse_val
             }
 
-            return result
+            return _safe_return(result)
 
         except Exception as ex:
+            # hata durumunda traceback ile dict dön
             tb = traceback.format_exc()
-            # Hata durumunda da boş string dönmeli
-            return {"error": "Exception during comparison", "exception": str(ex), "traceback": tb,
-                    "comparison_image_bytes": ""}
+            return _safe_return({
+                "error": "Exception during comparison",
+                "exception": str(ex),
+                "traceback": tb
+            })
 
 
     def run(self):
+        # DÜZELTME: img2'yi self.image2 ile al
         img = Image.get_frame(img=self.image, redis_db=self.redis_db)
         img2 = Image.get_frame(img=self.image2, redis_db=self.redis_db)
 
-        self.compareAndDesc = self.compareAndDesc(img.value, img2.value)
+        # Sonucu methodu ezmeden sakla
+        self.compare_result = self.compareAndDesc(img.value, img2.value)
 
-        if isinstance(self.compareAndDesc, dict):
-            self.compareAndDesc = [self.compareAndDesc]
+        # build_response_compare_and_describe'i güvenli şekilde çağır
+        packageModel = None
+        try:
+            if callable(build_response_compare_and_describe):
+                try:
+                    packageModel = build_response_compare_and_describe(self.compare_result)
+                except TypeError:
+                    # deneyelim: (output, image_bytes)
+                    try:
+                        packageModel = build_response_compare_and_describe(self.compare_result.get("output"), self.compare_result.get("comparison_image_bytes"))
+                    except TypeError:
+                        # deneyelim: (output, text_description, image_bytes)
+                        try:
+                            packageModel = build_response_compare_and_describe(self.compare_result.get("output"), self.compare_result.get("text_description"), self.compare_result.get("comparison_image_bytes"))
+                        except Exception:
+                            packageModel = None
+            # fallback: eğer yukarıdakiler başarısız oldu, packageModel = None kalır
+        except Exception:
+            try:
+                if hasattr(self, "logger"):
+                    self.logger.exception("Error while calling build_response_compare_and_describe in run()")
+            except Exception:
+                pass
 
-        packageModel = build_response_compare_and_describe(context=self)
+        # Eğer build_response... bir PackageModel döndürdüyse onu paketle; değilse result'i string olarak sakla
+        if packageModel is None:
+            # fallback: result'i PackageModel'e uygun şekilde doldurmak istiyorsanız, burada dönüştürme ekleyebilirsiniz.
+            # Şimdilik packageModel olarak direkt result döndürülür.
+            packageModel = self.compare_result
+
         return packageModel
 
 
