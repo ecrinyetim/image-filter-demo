@@ -33,30 +33,28 @@ class CompareAndDescribe(Component):
         return {}
 
     def compareAndDesc(self, img, img2):
-        """
-        img, img2: numpy arrays (BGR) expected.
-        Returns a plain dict (do NOT call build_response_* here).
-        """
 
-        # --- DÜZELTME 1: Hata durumunda None veya b"" yerine boş string dönüyoruz ---
+        import numpy as np
+        import cv2
+        import traceback
+        import base64  # <--- 1. BURAYA EKLENDİ
+
+        # --- validation ---
+        # Hata durumunda bytes (b"") yerine boş string ("") dönmelisiniz.
         if img is None or img2 is None:
-            return {
-                "error": "Both images must be provided",
-                "output": "",  # None yerine boş string
-                "comparison_image_bytes": "" # b"" (byte) yerine boş string
-            }
+            return {"error": "Both images must be provided", "output": None, "comparison_image_bytes": ""}
 
-        # Try to coerce to numpy arrays if needed
+        # ... (Kodun bu kısımları aynı kalabilir, array kontrolü vs.) ...
         if not isinstance(img, np.ndarray):
             try:
                 img = np.array(img)
             except Exception:
-                return {"error": "img is not a numpy array", "output": "", "comparison_image_bytes": ""}
+                return {"error": "img is not a numpy array", "output": None, "comparison_image_bytes": ""}
         if not isinstance(img2, np.ndarray):
             try:
                 img2 = np.array(img2)
             except Exception:
-                return {"error": "img2 is not a numpy array", "output": "", "comparison_image_bytes": ""}
+                return {"error": "img2 is not a numpy array", "output": None, "comparison_image_bytes": ""}
 
         # Ensure BGR 3-channel
         if img.ndim == 2:
@@ -69,7 +67,7 @@ class CompareAndDescribe(Component):
             if img.shape[:2] != img2.shape[:2]:
                 img2 = cv2.resize(img2, (img.shape[1], img.shape[0]), interpolation=cv2.INTER_AREA)
         except Exception:
-            return {"error": "Failed to resize images", "output": "", "comparison_image_bytes": ""}
+            return {"error": "Failed to resize images", "output": None, "comparison_image_bytes": ""}
 
         # helpers
         def _to_gray(i):
@@ -81,6 +79,7 @@ class CompareAndDescribe(Component):
             return float(np.mean((a_f - b_f) ** 2))
 
         def _ssim(imgA, imgB, k1=0.01, k2=0.03, L=255):
+            # ... (SSIM fonksiyonu aynı kalacak) ...
             C1 = (k1 * L) ** 2
             C2 = (k2 * L) ** 2
             imgA_f = imgA.astype(np.float32)
@@ -106,6 +105,7 @@ class CompareAndDescribe(Component):
             return mean_ssim, ssim_map
 
         def _make_vis(a_bgr, b_bgr, diff_gray, thresh=30):
+            # ... (Görselleştirme fonksiyonu aynı kalacak) ...
             _, th = cv2.threshold(diff_gray, thresh, 255, cv2.THRESH_BINARY)
             kernel = np.ones((3, 3), np.uint8)
             th = cv2.morphologyEx(th, cv2.MORPH_OPEN, kernel, iterations=1)
@@ -149,40 +149,44 @@ class CompareAndDescribe(Component):
             desc = []
             desc.append(f"Similarity (SSIM-based): {percentage:.2f}%")
             desc.append(f"MSE: {mse_val:.4f}")
-            desc.append(f"Number of differing regions: {num_diff_regions}")
+            desc.append(f"Number of differing regions (area >= 10 px): {num_diff_regions}")
             desc.append(f"Total differing pixels: {total_diff_pixels} ({diff_area_percent:.4f}%)")
-
             if percentage > 98.0 and diff_area_percent < 0.1:
-                desc.append("Yorum: Görseller neredeyse aynı.")
+                desc.append("Yorum: Görseller neredeyse aynı (çok küçük farklılıklar).")
             elif percentage > 90.0:
-                desc.append("Yorum: Görseller yüksek oranda benzer.")
+                desc.append("Yorum: Görseller yüksek oranda benzer; bazı küçük farklılıklar var.")
             elif percentage > 70.0:
-                desc.append("Yorum: Görseller kısmen benzer.")
+                desc.append("Yorum: Görseller kısmen benzer; farklar belirgin.")
             else:
                 desc.append("Yorum: Görseller büyük ölçüde farklı.")
             text_description = "\n".join(desc)
 
-            # --- DÜZELTME 2: GÖRSELİ KESİN OLARAK STRINGE ÇEVİR ---
-            comparison_image_string = ""
+            # ---------------------------------------------------------
+            # 2. DÜZELTME BURADA: Görseli Base64 String'e çeviriyoruz
+            # ---------------------------------------------------------
+
+            # encode visualization to jpeg bytes
             success, buf = cv2.imencode('.jpg', comp_vis, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+
+            comparison_image_bytes = ""
             if success:
-                # Byte dizisini Base64 STRING formatına çeviriyoruz.
-                comparison_image_string = base64.b64encode(buf).decode('utf-8')
+                # Raw bytes yerine Base64 string kullanıyoruz.
+                # .decode('utf-8') ile bytes objesini string'e çeviriyoruz.
+                comparison_image_bytes = base64.b64encode(buf).decode('utf-8')
 
             # prepare plain dict result
-            out_fmt = self.outputFormat if isinstance(self.outputFormat, str) else (str(self.outputFormat) if self.outputFormat is not None else "")
-
-            # output_value'nun kesinlikle String olduğundan emin olalım
+            out_fmt = self.outputFormat if isinstance(self.outputFormat, str) else (
+                str(self.outputFormat) if self.outputFormat is not None else "")
             if isinstance(out_fmt, str) and out_fmt.lower() == "percentage":
-                output_value = str(round(percentage, 2)) # Sayı gelirse stringe çevir
+                output_value = round(percentage, 2)
             else:
-                output_value = str(text_description)
+                output_value = text_description
 
             result = {
                 "output": output_value,
                 "percentage": round(percentage, 2),
                 "text_description": text_description,
-                "comparison_image_bytes": comparison_image_string, # Kesinlikle string
+                "comparison_image_bytes": comparison_image_bytes,  # Artık string formatında
                 "num_diff_regions": num_diff_regions,
                 "diff_area_percent": diff_area_percent,
                 "mse": mse_val
@@ -192,14 +196,9 @@ class CompareAndDescribe(Component):
 
         except Exception as ex:
             tb = traceback.format_exc()
-            # --- DÜZELTME 3: Hata durumunda boş string döndür ---
-            return {
-                "error": "Exception during comparison",
-                "exception": str(ex),
-                "traceback": tb,
-                "output": "", # None değil string
-                "comparison_image_bytes": "" # b"" değil string
-            }
+            # Hata durumunda da boş string dönmeli
+            return {"error": "Exception during comparison", "exception": str(ex), "traceback": tb,
+                    "comparison_image_bytes": ""}
 
 
     def run(self):
