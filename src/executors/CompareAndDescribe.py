@@ -8,10 +8,9 @@ import uuid
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../'))
 
-# 1. GİRİŞ GÖRÜNTÜSÜ (Okuma için)
+# GİRİŞ: Görüntü okuma sınıfı
 from sdks.novavision.src.media.image import Image
-
-# 2. ÇIKIŞ GÖRÜNTÜSÜ (Model Oluşturma için)
+# ÇIKIŞ: Model oluşturma sınıfı (İsim çakışmasını önlemek için ModelImage dedik)
 from sdks.novavision.src.base.model import Image as ModelImage
 
 from sdks.novavision.src.base.component import Component
@@ -34,7 +33,7 @@ class CompareAndDescribe(Component):
         self.percentage = self.request.get_param("Percentage")
         self.textDesc = self.request.get_param("TextDescription")
 
-        # build_response'un kullanacağı değişkenler
+        # build_response için değişkenler
         self.image = None
         self.text = None
 
@@ -74,28 +73,41 @@ class CompareAndDescribe(Component):
             if img_val1 is None or img_val2 is None:
                 return "Error: Images not found", None
 
+            # Numpy array kontrolü
             img = np.array(img_val1) if not isinstance(img_val1, np.ndarray) else img_val1
             img2 = np.array(img_val2) if not isinstance(img_val2, np.ndarray) else img_val2
 
+            # Boyut ve Kanal (3 kanal ise Gri yapma işlemi aşağıda, burda BGR yapıyoruz)
             if img.ndim == 2: img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
             if img2.ndim == 2: img2 = cv2.cvtColor(img2, cv2.COLOR_GRAY2BGR)
 
+            # Boyut Eşitleme
             if img.shape[:2] != img2.shape[:2]:
                 img2 = cv2.resize(img2, (img.shape[1], img.shape[0]), interpolation=cv2.INTER_AREA)
 
+            # Gri Tonlama (Hesaplamalar için)
             gray1 = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             gray2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
 
+            # MSE ve SSIM
             mse_val = self._mse(gray1, gray2)
             mean_ssim = self._ssim(gray1, gray2)
             percentage = mean_ssim * 100.0
 
+            # --- DÜZELTME BAŞLANGICI ---
+            # Fark görselini oluştur
             absdiff = cv2.absdiff(gray1, gray2)
 
+            # [WARN FIX] Görüntüyü açıkça uint8 (0-255 tamsayı) formatına çeviriyoruz.
+            # SSIM hesaplamalarında float dönüşümleri olduğu için absdiff float kalmış olabilir.
+            absdiff = absdiff.astype(np.uint8)
+
+            # Base64 Encode
             b64_string = None
             success, buf = cv2.imencode('.jpg', absdiff)
             if success:
                 b64_string = base64.b64encode(buf).decode('utf-8')
+            # --- DÜZELTME BİTİŞİ ---
 
             desc = f"Similarity: {percentage:.2f}%, MSE: {mse_val:.4f}"
 
@@ -107,20 +119,25 @@ class CompareAndDescribe(Component):
             return str(output_val), b64_string
 
         except Exception as e:
+            # Hata durumunda log basılabilir
+            print(f"Process Error: {e}")
             return f"Error: {str(e)}", None
 
     def run(self):
+        # 1. Görüntüleri Redis'ten al
         img_obj1 = Image.get_frame(img=self.input_image_param, redis_db=self.redis_db)
         img_obj2 = Image.get_frame(img=self.input_image2_param, redis_db=self.redis_db)
 
         val1 = img_obj1.value if img_obj1 else None
         val2 = img_obj2.value if img_obj2 else None
 
+        # 2. İşlemi yap
         text_result, b64_image = self.process(val1, val2)
 
+        # 3. Sonuçları hazırla
         self.text = text_result
 
-        # GÜNCELLEME BURADA: mimeType="image/jpg" yapıldı
+        # ModelImage nesnesini oluştur (ImageView bunu okuyacak)
         if b64_image:
             self.image = ModelImage(
                 value=b64_image,
@@ -128,20 +145,22 @@ class CompareAndDescribe(Component):
                 name="diff_result.jpg",
                 type="image",
                 uID=str(uuid.uuid4()),
-                mimeType="image/jpg",  # DÜZELTİLDİ: image/jpeg -> image/jpg
+                mimeType="image/jpg",  # ImageView için jpg/png/gif olmalı
                 encoding="base64"
             )
         else:
+            # ImageView boş veri alırsa çökmemesi için boş ama valid bir yapı dönüyoruz
             self.image = ModelImage(
                 value="",
                 src="",
                 name="error.jpg",
                 type="image",
                 uID=str(uuid.uuid4()),
-                mimeType="image/jpg",  # DÜZELTİLDİ
+                mimeType="image/jpg",
                 encoding="base64"
             )
 
+        # 4. Paketi oluştur
         packageModel = build_response_compare_and_describe(context=self)
 
         return packageModel
