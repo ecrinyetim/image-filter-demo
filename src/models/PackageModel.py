@@ -43,14 +43,11 @@ class OutputImage(Output):
 
     @validator("type", pre=True, always=True)
     def set_type_based_on_value(cls, value, values):
-        actual_value = values.get('value')
-
-        if isinstance(actual_value, list):
-            return "list"  # Eğer değer listeyse, type 'list' olsun
-        elif isinstance(actual_value, Image):
-            return "object"  # Eğer değer tekilse, type 'object' olsun
-
-        return "object"  # Fallback
+        value = values.get('value')
+        if isinstance(value, Image):
+            return "object"
+        elif isinstance(value, list):
+            return "list"
 
     class Config:
         title = "Image"
