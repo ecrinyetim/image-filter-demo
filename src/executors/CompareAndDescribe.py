@@ -79,7 +79,6 @@ class CompareAndDescribe(Component):
             percentage = mean_ssim * 100.0
 
             absdiff = cv2.absdiff(gray1, gray2)
-            # OpenCV uyarısını engellemek için uint8'e çeviriyoruz
             absdiff = absdiff.astype(np.uint8)
 
             b64_string = None
@@ -100,20 +99,15 @@ class CompareAndDescribe(Component):
             return f"Error: {str(e)}", None
 
     def run(self):
-        # 1. Görüntüleri al
         img_obj1 = Image.get_frame(img=self.input_image_param, redis_db=self.redis_db)
         img_obj2 = Image.get_frame(img=self.input_image2_param, redis_db=self.redis_db)
 
         val1 = img_obj1.value if img_obj1 else None
         val2 = img_obj2.value if img_obj2 else None
-
-        # 2. İşlemi yap
         text_result, b64_image = self.process(val1, val2)
 
         self.text = text_result
 
-        # 3. Sonucu LİSTE olarak paketle
-        # ImageView list beklediği için burada [] kullanıyoruz.
         if b64_image:
             image_instance = ModelImage(
                 value=b64_image,
@@ -136,10 +130,7 @@ class CompareAndDescribe(Component):
                 encoding="base64"
             )
             self.image = [image_instance]  # <-- BURASI LİSTE
-
-        # 4. Response oluştur
         packageModel = build_response_compare_and_describe(context=self)
-
         return packageModel
 
 
