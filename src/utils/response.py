@@ -17,7 +17,7 @@ def build_response_basic_filter(context):
 def build_response_compare_and_describe(context):
     outputImage= OutputImage(value=context.image)
     outputText= OutputText(value=context.text)
-    compareAndDescribeOutputs = CompareAndDescribeOutputs(outputImage=outputImage_obj, outputText=outputText_obj)
+    compareAndDescribeOutputs = CompareAndDescribeOutputs(outputImage=outputImage, outputText=outputText)
     compareAndDescribeResponse = CompareAndDescribeResponse(outputs=compareAndDescribeOutputs)
     compareAndDescribe = CompareAndDescribe(value=compareAndDescribeResponse)
     executor= ConfigExecutor(value=compareAndDescribe)
