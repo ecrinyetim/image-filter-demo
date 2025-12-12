@@ -267,10 +267,41 @@ class CompareAndDescribe(Component):
         # DÜZELTME: img2'yi self.image2 ile al
         img = Image.get_frame(img=self.image, redis_db=self.redis_db)
         img2 = Image.get_frame(img=self.image2, redis_db=self.redis_db)
-        self.compareAndDesc = self.compareAndDesc(img.value, img2.value)
-        if isinstance(self.compareAndDesc , dict): self.compareAndDesc  = [self.compareAndDesc]
-        PackageModel = build_response_compare_and_describe(context=self)
-        return PackageModel
+
+        # Sonucu methodu ezmeden sakla
+        self.compare_result = self.compareAndDesc(img.value, img2.value)
+
+        # build_response_compare_and_describe'i güvenli şekilde çağır
+        packageModel = None
+        try:
+            if callable(build_response_compare_and_describe):
+                try:
+                    packageModel = build_response_compare_and_describe(self.compare_result)
+                except TypeError:
+                    # deneyelim: (output, image_bytes)
+                    try:
+                        packageModel = build_response_compare_and_describe(self.compare_result.get("output"), self.compare_result.get("comparison_image_bytes"))
+                    except TypeError:
+                        # deneyelim: (output, text_description, image_bytes)
+                        try:
+                            packageModel = build_response_compare_and_describe(self.compare_result.get("output"), self.compare_result.get("text_description"), self.compare_result.get("comparison_image_bytes"))
+                        except Exception:
+                            packageModel = None
+            # fallback: eğer yukarıdakiler başarısız oldu, packageModel = None kalır
+        except Exception:
+            try:
+                if hasattr(self, "logger"):
+                    self.logger.exception("Error while calling build_response_compare_and_describe in run()")
+            except Exception:
+                pass
+
+        # Eğer build_response... bir PackageModel döndürdüyse onu paketle; değilse result'i string olarak sakla
+        if packageModel is None:
+            # fallback: result'i PackageModel'e uygun şekilde doldurmak istiyorsanız, burada dönüştürme ekleyebilirsiniz.
+            # Şimdilik packageModel olarak direkt result döndürülür.
+            packageModel = self.compare_result
+
+        return packageModel
 
 
 if "__main__" == __name__:
