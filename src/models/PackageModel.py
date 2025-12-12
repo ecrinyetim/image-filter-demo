@@ -140,7 +140,7 @@ class BasicFilterConfigs(Configs):
 #Outputs
 class OutputText(Output):
     name: Literal["outputText"] = "outputText"
-    value:Literal["string"] = "string"
+    value:str
     type: Literal["string"] = "string"
 
 class CompareAndDescribeOutputs(Outputs):
