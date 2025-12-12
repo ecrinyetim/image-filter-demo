@@ -3,15 +3,21 @@ import cv2
 import sys
 import numpy as np
 import traceback
-import base64  # Base64 eklendi
+import base64
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../'))
 
+# 1. GİRİŞ İÇİN GEREKLİ IMAGE SINIFI (Redis'ten okuyan)
 from sdks.novavision.src.media.image import Image
+
+# 2. ÇIKIŞ (MODEL) İÇİN GEREKLİ IMAGE SINIFI (Pydantic Model)
+# İsim çakışmasını önlemek için 'ModelImage' olarak import ediyoruz
+from sdks.novavision.src.base.model import Image as ModelImage
+
 from sdks.novavision.src.base.component import Component
 from sdks.novavision.src.helper.executor import Executor
 
-# Utils ve Models importları
+# Helper ve PackageModel importları
 from components.ImageFilterDemo.src.utils.response import build_response_compare_and_describe
 from components.ImageFilterDemo.src.models.PackageModel import PackageModel
 
@@ -20,15 +26,17 @@ class CompareAndDescribe(Component):
     def __init__(self, request, bootstrap):
         super().__init__(request, bootstrap)
         self.request.model = PackageModel(**(self.request.data))
-        # Giriş parametreleri
+
+        # Parametreler
         self.input_image_param = self.request.get_param("inputImage")
         self.input_image2_param = self.request.get_param("inputImage2")
         self.outputFormat = self.request.get_param("outputFormat")
         self.percentage = self.request.get_param("Percentage")
         self.textDesc = self.request.get_param("TextDescription")
 
-        self.image = None  # Output Image Object olacak
-        self.text = None  # Output Text String olacak
+        # build_response fonksiyonunun beklediği değişkenler
+        self.image = None  # Sonuç görseli (ModelImage objesi olacak)
+        self.text = None  # Sonuç metni (String olacak)
 
     @staticmethod
     def bootstrap(config: dict) -> dict:
@@ -40,12 +48,9 @@ class CompareAndDescribe(Component):
     def _ssim(self, imgA, imgB):
         try:
             k1, k2, L = 0.01, 0.03, 255
-            C1 = (k1 * L) ** 2
-            C2 = (k2 * L) ** 2
-            imgA = imgA.astype(np.float32)
-            imgB = imgB.astype(np.float32)
-            kernel = (11, 11)
-            sigma = 1.5
+            C1, C2 = (k1 * L) ** 2, (k2 * L) ** 2
+            imgA, imgB = imgA.astype(np.float32), imgB.astype(np.float32)
+            kernel, sigma = (11, 11), 1.5
             mu1 = cv2.GaussianBlur(imgA, kernel, sigma)
             mu2 = cv2.GaussianBlur(imgB, kernel, sigma)
             mu1_sq = mu1 ** 2
@@ -62,7 +67,10 @@ class CompareAndDescribe(Component):
             return 0.0
 
     def process(self, img_val1, img_val2):
-
+        """
+        Görüntü işleme ve karşılaştırma mantığı.
+        Return: (text_result_string, base64_image_string)
+        """
         try:
             if img_val1 is None or img_val2 is None:
                 return "Error: Images not found", None
@@ -71,7 +79,7 @@ class CompareAndDescribe(Component):
             img = np.array(img_val1) if not isinstance(img_val1, np.ndarray) else img_val1
             img2 = np.array(img_val2) if not isinstance(img_val2, np.ndarray) else img_val2
 
-            # Boyut/Renk Eşitleme
+            # Boyut ve Kanal Düzenleme
             if img.ndim == 2: img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
             if img2.ndim == 2: img2 = cv2.cvtColor(img2, cv2.COLOR_GRAY2BGR)
 
@@ -86,19 +94,19 @@ class CompareAndDescribe(Component):
             mean_ssim = self._ssim(gray1, gray2)
             percentage = mean_ssim * 100.0
 
-            # Görsel oluşturma (Diff Image)
+            # Görsel Farkı Oluşturma
             absdiff = cv2.absdiff(gray1, gray2)
 
-            # Base64 Dönüşümü (Çok Önemli)
+            # Base64 Çevrimi (Modelin kabul etmesi için şart)
             b64_string = None
             success, buf = cv2.imencode('.jpg', absdiff)
             if success:
-                # Bytes -> Base64 String
                 b64_string = base64.b64encode(buf).decode('utf-8')
 
-            # Metin oluşturma
+            # Metin Sonucu
             desc = f"Similarity: {percentage:.2f}%, MSE: {mse_val:.4f}"
 
+            # Output Format Seçimi
             output_val = desc
             req_fmt = str(self.outputFormat).strip() if self.outputFormat else ""
             if req_fmt == "Percentage":
@@ -110,35 +118,35 @@ class CompareAndDescribe(Component):
             return f"Error: {str(e)}", None
 
     def run(self):
-        # 1. Görüntüleri al (MediaImage kullanarak)
-        img_obj1 = MediaImage.get_frame(img=self.input_image_param, redis_db=self.redis_db)
-        img_obj2 = MediaImage.get_frame(img=self.input_image2_param, redis_db=self.redis_db)
+        # 1. Görüntüleri al (Standart 'Image' sınıfı ile)
+        img_obj1 = Image.get_frame(img=self.input_image_param, redis_db=self.redis_db)
+        img_obj2 = Image.get_frame(img=self.input_image2_param, redis_db=self.redis_db)
 
         val1 = img_obj1.value if img_obj1 else None
         val2 = img_obj2.value if img_obj2 else None
 
-        # 2. İşlemi yap
+        # 2. İşlemi gerçekleştir
         text_result, b64_image = self.process(val1, val2)
 
-        # 3. build_response için context verilerini hazırla
+        # 3. Context değişkenlerini doldur (build_response burayı okuyacak)
 
-        # Text sonucunu ata
+        # Metni string olarak ata
         self.text = text_result
 
-        # Image sonucunu 'BaseImage' nesnesine sararak ata
-        # PackageModel içindeki OutputImage bir 'Image' nesnesi bekliyor.
+        # Görseli 'ModelImage' sınıfına sararak ata
+        # PackageModel yapısı bir nesne bekliyor, string değil.
         if b64_image:
-            # BaseImage yapısı SDK'ya göre değişebilir ama genelde src=base64 veya value=base64 alır.
-            # En yaygın kullanım: src
-            self.image = BaseImage(src=b64_image, name="comparison_result.jpg")
+            # ModelImage genelde src, name veya value parametreleri alır.
+            # En güvenli yöntem Base64'ü src veya value içine vermektir.
+            self.image = ModelImage(src=b64_image, name="diff_result.jpg")
         else:
-            # Hata durumunda boş veya dummy image dönebiliriz
-            self.image = BaseImage(src="", name="error.jpg")
+            self.image = ModelImage(src="", name="error.jpg")
 
         # 4. Yanıtı oluştur
         packageModel = build_response_compare_and_describe(context=self)
 
         return packageModel
 
-    if "__main__" == __name__:
-        Executor(sys.argv[1]).run()
+
+if "__main__" == __name__:
+    Executor(sys.argv[1]).run()
