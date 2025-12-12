@@ -15,40 +15,38 @@ def build_response_basic_filter(context):
 
 
 def build_response_compare_and_describe(context):
-    # 1. Önce standart nesneleri oluşturuyoruz
-    outputImage_obj = OutputImage(value=context.image)  # context.image LİSTE olmalı
+    # 1. Output Nesneleri
+    # context.image artık bir LİSTE olduğu için OutputImage bunu kabul edecektir.
+    outputImage_obj = OutputImage(value=context.image)
     outputText_obj = OutputText(value=context.text)
 
+    # 2. Outputs Konteyneri
+    # Değişken adını sınıf adından ayırdık (camelCase riskine girmeyelim)
     outputs_obj = CompareAndDescribeOutputs(
         outputImage=outputImage_obj,
         outputText=outputText_obj
     )
 
+    # 3. Response Nesnesi
     response_obj = CompareAndDescribeResponse(outputs=outputs_obj)
 
-    # Task Config (CompareAndDescribe Config Sınıfı)
+    # 4. Config/Task Nesnesi
+    # BURASI KRİTİK: 'compareAndDescribe' değişken ismini 'task_config' yaptık.
+    # Böylece imported edilen 'CompareAndDescribe' sınıfı ile çakışmaz.
     task_config = CompareAndDescribe(value=response_obj)
 
+    # 5. Executor
     executor_obj = ConfigExecutor(value=task_config)
+
+    # 6. Package Configs
     package_configs = PackageConfigs(executor=executor_obj)
 
-    # 2. Modeli Helper ile inşa et (Metadata vs. için gerekli)
+    # 7. Modeli İnşa Et
     package = PackageHelper(packageModel=PackageModel, packageConfigs=package_configs)
-    final_package_model = package.build_model(context)
+    packageModel = package.build_model(context)
 
-    # --- KRİTİK MÜDAHALE (MANUEL ENJEKSİYON) ---
-    # Helper'ın veriyi doğru yazdığından emin değiliz, bu yüzden
-    # oluşturduğumuz dolu config yapısını final modele zorla atıyoruz.
-    try:
-        # Pydantic modellerinde hiyerarşi şöyledir: Model -> Configs -> Executor -> Value (Task) -> Value (Response) -> Outputs
-        final_package_model.configs.executor.value.value.outputs.outputImage.value = context.image
-        final_package_model.configs.executor.value.value.outputs.outputText.value = context.text
-    except Exception as e:
-        # Eğer yapı henüz tam oluşmadıysa, komple config'i atayalım
-        print(f"Manual injection fallback triggered: {e}")
-        final_package_model.configs = package_configs
+    return packageModel
 
-    return final_package_model
 
 
 
