@@ -4,20 +4,20 @@ import sys
 import numpy as np
 import traceback
 import base64
-import uuid  # EKLENDİ: uID oluşturmak için gerekli
+import uuid
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../'))
 
-# 1. GİRİŞ İÇİN GEREKLİ IMAGE SINIFI (Redis'ten okuyan)
+# 1. GİRİŞ GÖRÜNTÜSÜ (Okuma için)
 from sdks.novavision.src.media.image import Image
 
-# 2. ÇIKIŞ (MODEL) İÇİN GEREKLİ IMAGE SINIFI (Pydantic Model)
+# 2. ÇIKIŞ GÖRÜNTÜSÜ (Model Oluşturma için)
 from sdks.novavision.src.base.model import Image as ModelImage
 
 from sdks.novavision.src.base.component import Component
 from sdks.novavision.src.helper.executor import Executor
 
-# Helper ve PackageModel importları
+# Helper ve PackageModel
 from components.ImageFilterDemo.src.utils.response import build_response_compare_and_describe
 from components.ImageFilterDemo.src.models.PackageModel import PackageModel
 
@@ -34,7 +34,7 @@ class CompareAndDescribe(Component):
         self.percentage = self.request.get_param("Percentage")
         self.textDesc = self.request.get_param("TextDescription")
 
-        # build_response değişkenleri
+        # build_response'un kullanacağı değişkenler
         self.image = None
         self.text = None
 
@@ -120,26 +120,25 @@ class CompareAndDescribe(Component):
 
         self.text = text_result
 
-        # DÜZELTME BURADA: ModelImage nesnesini eksiksiz dolduruyoruz
+        # GÜNCELLEME BURADA: mimeType="image/jpg" yapıldı
         if b64_image:
             self.image = ModelImage(
-                value=b64_image,  # Missing Field: value
-                src=f"data:image/jpeg;base64,{b64_image}",  # Source olarak data URI veriyoruz
+                value=b64_image,
+                src=f"data:image/jpeg;base64,{b64_image}",
                 name="diff_result.jpg",
-                type="image",  # Missing Field: type
-                uID=str(uuid.uuid4()),  # Missing Field: uID
-                mimeType="image/jpeg",  # Missing Field: mimeType
-                encoding="base64"  # Missing Field: encoding
+                type="image",
+                uID=str(uuid.uuid4()),
+                mimeType="image/jpg",  # DÜZELTİLDİ: image/jpeg -> image/jpg
+                encoding="base64"
             )
         else:
-            # Hata durumunda boş dummy image
             self.image = ModelImage(
                 value="",
                 src="",
-                name="error_or_empty.jpg",
+                name="error.jpg",
                 type="image",
                 uID=str(uuid.uuid4()),
-                mimeType="image/jpeg",
+                mimeType="image/jpg",  # DÜZELTİLDİ
                 encoding="base64"
             )
 
