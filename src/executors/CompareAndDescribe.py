@@ -5,6 +5,7 @@
 import os
 import cv2
 import sys
+import hashlib
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../'))
 
@@ -25,6 +26,9 @@ class CompareAndDescribe(Component):
         self.percentage = self.request.get_param("Percentage")
         self.textDesc = self.request.get_param("TextDescription")
 
+        # Sonuç burada saklanır; method override edilmesin diye ayrı attribute kullanalım
+        self.compare_result = None
+
     @staticmethod
     def bootstrap(config: dict) -> dict:
         return {}
@@ -34,9 +38,31 @@ class CompareAndDescribe(Component):
         import cv2
         import base64
         import traceback
+        import hashlib
 
         # Güvenli dönüş helper'ı
         def _safe_return(result_dict):
+            # Log: comparison_image_bytes'ı ham basma; bunun yerine len + md5 logla (eğer logger varsa)
+            try:
+                b = result_dict.get("comparison_image_bytes")
+                if isinstance(b, (bytes, bytearray)):
+                    length = len(b)
+                    md5 = hashlib.md5(b).hexdigest()
+                    if hasattr(self, "logger"):
+                        try:
+                            self.logger.debug("comparison_image_bytes info: len=%d md5=%s", length, md5)
+                        except Exception:
+                            pass
+                else:
+                    if hasattr(self, "logger"):
+                        try:
+                            self.logger.debug("comparison_image_bytes not bytes or missing")
+                        except Exception:
+                            pass
+            except Exception:
+                # swallow logging errors
+                pass
+
             # Eğer build_response_compare_and_describe fonksiyonu varsa, önce farklı imzalarla çağırmayı dene
             try:
                 if callable(build_response_compare_and_describe):
@@ -59,7 +85,6 @@ class CompareAndDescribe(Component):
             except Exception:
                 # build_response... çağrısında hata olursa log ekle fakat yine dict döndür
                 try:
-                    # fallback log - eğer sınıfın logger'ı varsa kullan
                     if hasattr(self, "logger"):
                         self.logger.exception("build_response_compare_and_describe call failed")
                 except Exception:
@@ -239,13 +264,45 @@ class CompareAndDescribe(Component):
 
 
     def run(self):
+        # DÜZELTME: img2'yi self.image2 ile al
         img = Image.get_frame(img=self.image, redis_db=self.redis_db)
-        img2 = Image.get_frame(img=self.image, redis_db=self.redis_db)
-        self.compareAndDesc = self.compareAndDesc(img.value, img2.value)
-        if isinstance(self.compareAndDesc , dict): self.compareAndDesc  = [self.compareAndDesc]
-        packageModel = build_response_compare_and_describe(context=self)
-        return PackageModel
+        img2 = Image.get_frame(img=self.image2, redis_db=self.redis_db)
+
+        # Sonucu methodu ezmeden sakla
+        self.compare_result = self.compareAndDesc(img.value, img2.value)
+
+        # build_response_compare_and_describe'i güvenli şekilde çağır
+        packageModel = None
+        try:
+            if callable(build_response_compare_and_describe):
+                try:
+                    packageModel = build_response_compare_and_describe(self.compare_result)
+                except TypeError:
+                    # deneyelim: (output, image_bytes)
+                    try:
+                        packageModel = build_response_compare_and_describe(self.compare_result.get("output"), self.compare_result.get("comparison_image_bytes"))
+                    except TypeError:
+                        # deneyelim: (output, text_description, image_bytes)
+                        try:
+                            packageModel = build_response_compare_and_describe(self.compare_result.get("output"), self.compare_result.get("text_description"), self.compare_result.get("comparison_image_bytes"))
+                        except Exception:
+                            packageModel = None
+            # fallback: eğer yukarıdakiler başarısız oldu, packageModel = None kalır
+        except Exception:
+            try:
+                if hasattr(self, "logger"):
+                    self.logger.exception("Error while calling build_response_compare_and_describe in run()")
+            except Exception:
+                pass
+
+        # Eğer build_response... bir PackageModel döndürdüyse onu paketle; değilse result'i string olarak sakla
+        if packageModel is None:
+            # fallback: result'i PackageModel'e uygun şekilde doldurmak istiyorsanız, burada dönüştürme ekleyebilirsiniz.
+            # Şimdilik packageModel olarak direkt result döndürülür.
+            packageModel = self.compare_result
+
+        return packageModel
+
 
 if "__main__" == __name__:
     Executor(sys.argv[1]).run()
-
