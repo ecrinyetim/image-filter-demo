@@ -12,6 +12,7 @@ from sdks.novavision.src.media.image import Image
 from sdks.novavision.src.base.model import Image as ModelImage
 from sdks.novavision.src.base.component import Component
 from sdks.novavision.src.helper.executor import Executor
+# Helper fonksiyonu aşağıda verdiğim yeni response.py dosyasından gelecek
 from components.ImageFilterDemo.src.utils.response import build_response_compare_and_describe
 from components.ImageFilterDemo.src.models.PackageModel import PackageModel
 
@@ -27,8 +28,7 @@ class CompareAndDescribe(Component):
         self.percentage = self.request.get_param("Percentage")
         self.textDesc = self.request.get_param("TextDescription")
 
-        # Değişkenler
-        self.image = []  # Başlangıçta boş liste yapalım
+        self.image = []  # Liste başlat
         self.text = ""
 
     @staticmethod
@@ -46,7 +46,9 @@ class CompareAndDescribe(Component):
             kernel, sigma = (11, 11), 1.5
             mu1 = cv2.GaussianBlur(imgA, kernel, sigma)
             mu2 = cv2.GaussianBlur(imgB, kernel, sigma)
-            mu1_sq, mu2_sq, mu1_mu2 = mu1 ** 2, mu2 ** 2, mu1 * mu2
+            mu1_sq = mu1 ** 2
+            mu2_sq = mu2 ** 2
+            mu1_mu2 = mu1 * mu2
             sigma1_sq = cv2.GaussianBlur(imgA ** 2, kernel, sigma) - mu1_sq
             sigma2_sq = cv2.GaussianBlur(imgB ** 2, kernel, sigma) - mu2_sq
             sigma12 = cv2.GaussianBlur(imgA * imgB, kernel, sigma) - mu1_mu2
@@ -104,10 +106,12 @@ class CompareAndDescribe(Component):
 
         val1 = img_obj1.value if img_obj1 else None
         val2 = img_obj2.value if img_obj2 else None
+
         text_result, b64_image = self.process(val1, val2)
 
         self.text = text_result
 
+        # ModelImage listesi oluşturma
         if b64_image:
             image_instance = ModelImage(
                 value=b64_image,
@@ -118,7 +122,7 @@ class CompareAndDescribe(Component):
                 mimeType="image/jpg",
                 encoding="base64"
             )
-            self.image = [image_instance]  # <-- BURASI LİSTE
+            self.image = [image_instance]  # LİSTE
         else:
             image_instance = ModelImage(
                 value="",
@@ -129,7 +133,8 @@ class CompareAndDescribe(Component):
                 mimeType="image/jpg",
                 encoding="base64"
             )
-            self.image = [image_instance]  # <-- BURASI LİSTE
+            self.image = [image_instance]  # LİSTE
+
         packageModel = build_response_compare_and_describe(context=self)
         return packageModel
 
