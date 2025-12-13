@@ -1,6 +1,6 @@
 
 from sdks.novavision.src.helper.package import PackageHelper
-from components.ImageFilterDemo.src.models.PackageModel import PackageModel, PackageConfigs, ConfigExecutor , OutputImage, OutputText, BasicFilterResponse, BasicFilterOutputs, BasicFilter, CompareAndDescribeResponse, CompareAndDescribeOutputs, CompareAndDescribe
+from components.ImageFilterDemo.src.models.PackageModel import PackageModel, PackageConfigs, ConfigExecutor , OutputImage, OutputText, BasicFilterResponse, BasicFilterOutputs, BasicFilter, ThresholdResponse, ThresholdOutputs, Threshold
 
 def build_response_basic_filter(context):
     outputImage = OutputImage(value=context.image)
@@ -14,13 +14,13 @@ def build_response_basic_filter(context):
     return packageModel
 
 
-def build_response_compare_and_describe(context):
+def build_response_threshold(context):
     outputImage= OutputImage(value=context.image)
     outputText= OutputText(value=context.text)
-    compareAndDescribeOutputs = CompareAndDescribeOutputs(outputImage=outputImage, outputText=outputText)
-    compareAndDescribeResponse = CompareAndDescribeResponse(outputs=compareAndDescribeOutputs)
-    compareAndDescribe = CompareAndDescribe(value=compareAndDescribeResponse)
-    executor= ConfigExecutor(value=compareAndDescribe)
+    thresholdOutputs = ThresholdOutputs(outputImage=outputImage, outputText=outputText)
+    thresholdResponse = ThresholdResponse(outputs=thresholdOutputs)
+    thresholdDescribe = Threshold(value=thresholdResponse)
+    executor= ConfigExecutor(value=threshold)
     package_configs = PackageConfigs(executor=executor)
     package = PackageHelper(packageModel=PackageModel, packageConfigs=package_configs)
     packageModel = package.build_model(context)

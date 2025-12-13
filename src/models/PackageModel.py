@@ -93,32 +93,10 @@ class Intensity(Config):
     field: Literal["textInput"] = "textInput"
 
 #CompareAndDescribe Configs
-class Percentage(Config):
-    name: Literal["Percentage"] = "Percentage"
-    value:Literal["Percentage"] = "Percentage"
-    type: Literal["number"] = "number"
-    field: Literal["option"] = "option"
-    class Config:
-        title="Percentage"
 
-class TextDescription(Config):
-    name: Literal["TextDescription"] = "TextDescription"
-    value:Literal["TextDescription"] = "TextDescription"
-    type: Literal["string"] = "string"
-    field: Literal["option"] = "option"
-    class Config:
-        title = "Text Description"
-
-class OutputFormat(Config):
-    name: Literal["outputFormat"] = "outputFormat"
-    value:Union[Percentage, TextDescription]
-    type: Literal["object"] = "object"
-    field: Literal["dropdownlist"] = "dropdownList"
-    class Config:
-        title="Output Format"
 
 #Inputs
-class  CompareAndDescribeInputs(Inputs):
+class  ThresholdInputs(Inputs):
     inputImage: InputImage
     inputImage2: InputImage2
 
@@ -128,7 +106,7 @@ class BasicFilterInputs(Inputs):
 
 
 #Configs
-class CompareAndDescribeConfigs(Configs):
+class ThresholdConfigs(Configs):
     outputFormat: OutputFormat
 
 
@@ -143,7 +121,7 @@ class OutputText(Output):
     value:str
     type: Literal["string"] = "string"
 
-class CompareAndDescribeOutputs(Outputs):
+class ThresholdOutputs(Outputs):
     outputImage: OutputImage
     outputText: OutputText
 
@@ -152,9 +130,9 @@ class BasicFilterOutputs(Outputs):
 
 
 #Requests
-class CompareAndDescribeRequest(Request):
-    inputs: Optional[CompareAndDescribeInputs]
-    configs: CompareAndDescribeConfigs
+class ThresholdRequest(Request):
+    inputs: Optional[ThresholdInputs]
+    configs: ThresholdConfigs
 
     class Config:
         json_schema_extra = {
@@ -173,8 +151,8 @@ class BasicFilterRequest(Request):
 
 
 #Responses
-class CompareAndDescribeResponse(Response):
-    outputs: CompareAndDescribeOutputs
+class ThresholdResponse(Response):
+    outputs: ThresholdOutputs
 
 
 class BasicFilterResponse(Response):
@@ -183,14 +161,14 @@ class BasicFilterResponse(Response):
 
 
 #Executors
-class CompareAndDescribe(Config):
-    name: Literal["CompareAndDescribe"] = "CompareAndDescribe"
-    value: Union[CompareAndDescribeRequest, CompareAndDescribeResponse]
+class Threshold(Config):
+    name: Literal["Threshold"] = "Threshold"
+    value: Union[ThresholdRequest, ThresholdResponse]
     type: Literal["object"] = "object"
     field: Literal["option"] = "option"
 
     class Config:
-        title = "CompareAndDescribe"
+        title = "Threshold"
         json_schema_extra = {
             "target": {
                 "value": 0
@@ -214,7 +192,7 @@ class BasicFilter(Config):
 #ImageFilterDemo
 class ConfigExecutor(Config):
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
-    value: Union[BasicFilter,CompareAndDescribe]
+    value: Union[BasicFilter,Threshold]
     type: Literal["executor"] = "executor"
     field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
 
