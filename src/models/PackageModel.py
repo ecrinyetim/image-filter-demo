@@ -92,7 +92,7 @@ class Intensity(Config):
     type: Literal["number"] = "number"
     field: Literal["textInput"] = "textInput"
 
-#CompareAndDescribe Configs
+#Threshold Configs
 class ThresholdValue(Config):
     name: Literal["thresholdValue"] = "thresholdValue"
     value: int = Field(default=127, ge=0, le=255)
