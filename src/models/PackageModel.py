@@ -101,7 +101,7 @@ class ThresholdValue(Config):
     class Config:
         title = "Eşik Değeri (0-255)"
 
-class Manuel(Config):
+class Automatic(Config):
     name: Literal["Automatic"] = "Automatic"
     value: Literal["Automatic"] = "Automatic"
     type: Literal["string"] = "string"
