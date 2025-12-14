@@ -107,7 +107,6 @@ class BasicFilterInputs(Inputs):
 
 #Configs
 class ThresholdConfigs(Configs):
-    outputFormat: OutputFormat
 
 
 class BasicFilterConfigs(Configs):
