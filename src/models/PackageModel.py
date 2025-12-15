@@ -86,7 +86,6 @@ class FilterType(Config):
 
 
 class Intensity(Config):
-
     name: Literal["intensity"] = "intensity"
     value: float = Field(ge=1, le=10)
     type: Literal["number"] = "number"
@@ -96,44 +95,14 @@ class Intensity(Config):
 class ThresholdValue(Config):
     name: Literal["thresholdValue"] = "thresholdValue"
     value: int = Field(default=127, ge=0, le=255)
-    type: Literal["integer"] = "integer"
-    field: Literal["slider"] = "slider"
-    class Config:
-        title = "Eşik Değeri (0-255)"
+    type: Literal["number"] = "number"
+    field: Literal["textInput"] = "textInput"
 
-class Automatic(Config):
-    name: Literal["Automatic"] = "Automatic"
-    value: Literal["Automatic"] = "Automatic"
-    type: Literal["string"] = "string"
-    field: Literal["option"] = "option"
-
-    class Config:
-        title = "Automatic"
-
-
-class Manuel(Config):
-    name: Literal["Manuel"] = "Manuel"
-    value: Literal["Manuel"] = "Manuel"
-    type: Literal["string"] = "string"
-    field: Literal["option"] = "option"
-
-    class Config:
-        title = "Manuel"
-
-
-class ThresholdMode(Config):
-    name: Literal["thresholdMode"] = "thresholdMode"
-    value: Union[Manuel, Automatic]
-    type: Literal["object"] = "object"
-    field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
-    class Config:
-        title="Method Selection"
 
 #Inputs
 class  ThresholdInputs(Inputs):
     inputImage: InputImage
     inputImage2: InputImage2
-
 
 class BasicFilterInputs(Inputs):
     inputImage: InputImage
@@ -141,7 +110,7 @@ class BasicFilterInputs(Inputs):
 
 #Configs
 class ThresholdConfigs(Configs):
-    thresholdMode:ThresholdMode
+    thresholdValue:ThresholdValue
 
 class BasicFilterConfigs(Configs):
     filterType: FilterType
