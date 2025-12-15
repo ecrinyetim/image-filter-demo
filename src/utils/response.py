@@ -19,7 +19,7 @@ def build_response_threshold(context):
     outputText= OutputText(value=context.text)
     thresholdOutputs = ThresholdOutputs(outputImage=outputImage, outputText=outputText)
     thresholdResponse = ThresholdResponse(outputs=thresholdOutputs)
-    thresholdDescribe = Threshold(value=thresholdResponse)
+    threshold = Threshold(value=thresholdResponse)
     executor= ConfigExecutor(value=threshold)
     package_configs = PackageConfigs(executor=executor)
     package = PackageHelper(packageModel=PackageModel, packageConfigs=package_configs)
