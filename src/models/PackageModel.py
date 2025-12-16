@@ -144,7 +144,7 @@ class BasicFilterConfigs(Configs):
 # Outputs
 class ThresholdOutputs(Outputs):
     outputImage: OutputImage
-    outputImage: OutputImage2
+    outputImage2: OutputImage2
 
 
 class BasicFilterOutputs(Outputs):
