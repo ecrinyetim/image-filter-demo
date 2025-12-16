@@ -1,7 +1,8 @@
-
 from pydantic import Field, validator
 from typing import List, Optional, Union, Literal
-from sdks.novavision.src.base.model import Package, Image, Inputs, Configs, Outputs, Response, Request, Output, Input, Config
+from sdks.novavision.src.base.model import Package, Image, Inputs, Configs, Outputs, Response, Request, Output, Input, \
+    Config
+
 
 class InputImage(Input):
     name: Literal["inputImage"] = "inputImage"
@@ -18,6 +19,7 @@ class InputImage(Input):
 
     class Config:
         title = "Image"
+
 
 class InputImage2(Input):
     name: Literal["inputImage2"] = "inputImage2"
@@ -38,7 +40,7 @@ class InputImage2(Input):
 
 class OutputImage(Output):
     name: Literal["outputImage"] = "outputImage"
-    value: Union[List[Image],Image]
+    value: Union[List[Image], Image]
     type: str = "object"
 
     @validator("type", pre=True, always=True)
@@ -53,8 +55,24 @@ class OutputImage(Output):
         title = "Image"
 
 
+class OutputImage2(Output):
+    name: Literal["outputImage2"] = "outputImage2"
+    value: Union[List[Image], Image]
+    type: str = "object"
 
-#BasicFilter Configs
+    @validator("type", pre=True, always=True)
+    def set_type_based_on_value(cls, value, values):
+        value = values.get('value')
+        if isinstance(value, Image):
+            return "object"
+        elif isinstance(value, list):
+            return "list"
+
+    class Config:
+        title = "Image"
+
+
+# BasicFilter Configs
 class Blur(Config):
     name: Literal["Blur"] = "Blur"
     value: Literal["Blur"] = "Blur"
@@ -63,6 +81,7 @@ class Blur(Config):
 
     class Config:
         title = "Blur"
+
 
 class Sharpen(Config):
     name: Literal["Sharpen"] = "Sharpen"
@@ -73,6 +92,7 @@ class Sharpen(Config):
     class Config:
         title = "Sharpen"
 
+
 class FilterType(Config):
     """
     Select which filter to apply to the image.
@@ -81,8 +101,9 @@ class FilterType(Config):
     value: Union[Blur, Sharpen]
     type: Literal["object"] = "object"
     field: Literal["dropdownlist"] = "dropdownlist"
+
     class Config:
-        title="Filter Type"
+        title = "Filter Type"
 
 
 class Intensity(Config):
@@ -91,7 +112,8 @@ class Intensity(Config):
     type: Literal["number"] = "number"
     field: Literal["textInput"] = "textInput"
 
-#Threshold Configs
+
+# Threshold Configs
 class ThresholdValue(Config):
     name: Literal["thresholdValue"] = "thresholdValue"
     value: int = Field(default=127, ge=0, le=255)
@@ -99,39 +121,37 @@ class ThresholdValue(Config):
     field: Literal["textInput"] = "textInput"
 
 
-#Inputs
-class  ThresholdInputs(Inputs):
+# Inputs
+class ThresholdInputs(Inputs):
     inputImage: InputImage
     inputImage2: InputImage2
+
 
 class BasicFilterInputs(Inputs):
     inputImage: InputImage
 
 
-#Configs
+# Configs
 class ThresholdConfigs(Configs):
-    thresholdValue:ThresholdValue
+    thresholdValue: ThresholdValue
+
 
 class BasicFilterConfigs(Configs):
     filterType: FilterType
-    intensity : Intensity
+    intensity: Intensity
 
 
-#Outputs
-class OutputText(Output):
-    name: Literal["outputText"] = "outputText"
-    value:str
-    type: Literal["string"] = "string"
-
+# Outputs
 class ThresholdOutputs(Outputs):
     outputImage: OutputImage
-    outputText: OutputText
+    outputImage: OutputImage2
+
 
 class BasicFilterOutputs(Outputs):
     outputImage: OutputImage
 
 
-#Requests
+# Requests
 class ThresholdRequest(Request):
     inputs: Optional[ThresholdInputs]
     configs: ThresholdConfigs
@@ -152,7 +172,7 @@ class BasicFilterRequest(Request):
         }
 
 
-#Responses
+# Responses
 class ThresholdResponse(Response):
     outputs: ThresholdOutputs
 
@@ -161,8 +181,7 @@ class BasicFilterResponse(Response):
     outputs: BasicFilterOutputs
 
 
-
-#Executors
+# Executors
 class Threshold(Config):
     name: Literal["Threshold"] = "Threshold"
     value: Union[ThresholdRequest, ThresholdResponse]
@@ -176,6 +195,7 @@ class Threshold(Config):
                 "value": 0
             }
         }
+
 
 class BasicFilter(Config):
     name: Literal["BasicFilter"] = "BasicFilter"
@@ -191,18 +211,21 @@ class BasicFilter(Config):
             }
         }
 
-#ImageFilterDemo
+
+# ImageFilterDemo
 class ConfigExecutor(Config):
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
-    value: Union[BasicFilter,Threshold]
+    value: Union[BasicFilter, Threshold]
     type: Literal["executor"] = "executor"
     field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
 
     class Config:
         title = "Task"
 
+
 class PackageConfigs(Configs):
     executor: ConfigExecutor
+
 
 class PackageModel(Package):
     configs: PackageConfigs
