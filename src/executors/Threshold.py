@@ -36,27 +36,29 @@ class Threshold(Component):
     def bootstrap(config: dict) -> dict:
         return {}
 
-    def process_images(self, img1, img2):
+    def apply_threshold(self, img):
         try:
-            # RESİM 1 İŞLEMİ (Threshold)
-            gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
-            _, t1 = cv2.threshold(gray1, self.thresh_value, 255, cv2.THRESH_BINARY)
-            out1 = cv2.cvtColor(t1, cv2.COLOR_GRAY2BGR)
-
-            # RESİM 2 İŞLEMİ (Grayscale)
-            gray2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
-            out2 = cv2.cvtColor(gray2, cv2.COLOR_GRAY2BGR)
-
-            return out1, out2
-
-        except Exception as e:
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            _, thresh = cv2.threshold(gray, self.thresh_value, 255, cv2.THRESH_BINARY)
+            return cv2.cvtColor(thresh, cv2.COLOR_GRAY2BGR)
+        except Exception:
             traceback.print_exc()
-            return img1, img2
+            return img
+
+    # --- METHOD 2: Sadece Grayscale İşlemi ---
+    def apply_grayscale(self, img):
+        try:
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            return cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+        except Exception:
+            traceback.print_exc()
+            return img
 
     def run(self):
         img_one = Image.get_frame(img=self.image, redis_db=self.redis_db)
         img_two = Image.get_frame(img=self.image2, redis_db=self.redis_db)
-        img_one.value, img_two.value = self.process_images(img_one.value, img_two.value)
+        img_one.value= self.apply_threshold(img_one.value)
+        img_two.value = self.apply_grayscale(img_two.value)
         self.image = Image.set_frame(img=img_one,package_uID=self.uID, redis_db=self.redis_db)
         self.image2 = Image.set_frame(img=img_two,package_uID=self.uID, redis_db=self.redis_db)
 
