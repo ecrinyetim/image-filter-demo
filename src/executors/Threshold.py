@@ -56,10 +56,10 @@ class Threshold(Component):
     def run(self):
         img_one = Image.get_frame(img=self.image, redis_db=self.redis_db)
         img_two = Image.get_frame(img=self.image2, redis_db=self.redis_db)
-        res1, res2 = self.process_images(img_one.value, img_two.value)
+        img_one.value, img_two.value = self.process_images(img_one.value, img_two.value)
+        self.image = Image.set_frame(img=img_one, redis_db=self.redis_db)
+        self.image2 = Image.set_frame(img=img_two, redis_db=self.redis_db)
 
-        self.res_img1 = res1
-        self.res_img2 = res2
         packageModel = build_response_threshold(context=self)
 
         return packageModel
