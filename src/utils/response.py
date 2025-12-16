@@ -16,8 +16,8 @@ def build_response_basic_filter(context):
 
 def build_response_threshold(context):
     outputImage= OutputImage(value=context.image)
-    outputImage2= OutputText(value=context.image)
-    thresholdOutputs = ThresholdOutputs(outputImage=outputImage, outputText=outputText)
+    outputImage2= OutputImage2(value=context.image)
+    thresholdOutputs = ThresholdOutputs(outputImage=outputImage, outputImage2=outputImage2)
     thresholdResponse = ThresholdResponse(outputs=thresholdOutputs)
     threshold = Threshold(value=thresholdResponse)
     executor= ConfigExecutor(value=threshold)
