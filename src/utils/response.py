@@ -1,6 +1,6 @@
 
 from sdks.novavision.src.helper.package import PackageHelper
-from components.ImageFilterDemo.src.models.PackageModel import PackageModel, PackageConfigs, ConfigExecutor , OutputImage, OutputText, BasicFilterResponse, BasicFilterOutputs, BasicFilter, ThresholdResponse, ThresholdOutputs, Threshold
+from components.ImageFilterDemo.src.models.PackageModel import PackageModel, PackageConfigs, ConfigExecutor , OutputImage, OutputImage2, BasicFilterResponse, BasicFilterOutputs, BasicFilter, ThresholdResponse, ThresholdOutputs, Threshold
 
 def build_response_basic_filter(context):
     outputImage = OutputImage(value=context.image)
@@ -16,7 +16,7 @@ def build_response_basic_filter(context):
 
 def build_response_threshold(context):
     outputImage= OutputImage(value=context.image)
-    outputText= OutputText(value=context.text)
+    outputImage2= OutputText(value=context.image)
     thresholdOutputs = ThresholdOutputs(outputImage=outputImage, outputText=outputText)
     thresholdResponse = ThresholdResponse(outputs=thresholdOutputs)
     threshold = Threshold(value=thresholdResponse)
