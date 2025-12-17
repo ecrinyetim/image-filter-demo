@@ -33,10 +33,11 @@ class BasicFilter(Component):
             return cv2.GaussianBlur(img, (ksize, ksize), sigmaX=0)
 
         elif self.filterType == "Sharpen":
+            alpha = self.intensity / 10.0
             kernel = np.array([
-                [-1, -1, -1],
-                [-1, 1 + self.intensity, -1],
-                [-1, -1, -1]
+                [0, -alpha, 0],
+                [-alpha, 1 + 4 * alpha, -alpha],
+                [0, -alpha, 0]
             ], dtype=np.float32)
             return cv2.filter2D(img, -1, kernel)
 
